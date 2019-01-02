@@ -2,7 +2,6 @@ package processor
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 
@@ -19,7 +18,7 @@ type snippet struct {
 }
 
 func (s *snippet) compile() string {
-	return fmt.Sprintf("grpc_cli call %s%s %s.%s %s",
+	return fmt.Sprintf("grpc_cli call %s%s %s.%s --json_input '%s'\n",
 		Address, Port, s.service, s.method, s.data.String(),
 	)
 }
@@ -85,19 +84,33 @@ func (p *V3Processor) ProcessReq() error {
 		}
 	}
 
-	for _, fname := range p.req.FileToGenerate {
-		f := p.files[fname]
-
+	for _, fn := range p.req.FileToGenerate {
+		f := p.files[fn]
 		for _, srv := range f.Service {
 			for _, m := range srv.Method {
-				if inType, ok := p.messages[m.GetInputType()]; ok {
-					io.WriteString(&p.output, fmt.Sprintf("\t - input fields: \n"))
-					for i, field := range inType.Field {
-						io.WriteString(&p.output, fmt.Sprintf("\t\t [%d] %v \n", i, field.GetType()))
-					}
+
+				// process method
+				obj, err := p.processMethod(m)
+				if err != nil {
+					return err
 				}
+
+				p.output = append(p.output, snippet{
+					service: srv.GetName(),
+					method:  m.GetName(),
+					data:    obj,
+				})
 			}
 		}
 	}
 	return nil
+}
+
+func (p *V3Processor) processMethod(m *descriptor.MethodDescriptorProto) (*gabs.Container, error) {
+	jsonObj := gabs.New()
+	jsonObj.Array("senbei_types")
+	jsonObj.ArrayAppend("wei", "senbei_types")
+	// "senbei_types": ["wei", "soiya"], "max_price": 10}
+	jsonObj.Set(10, "max_price")
+	return jsonObj, nil
 }

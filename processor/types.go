@@ -1,13 +1,7 @@
 package processor
 
 import (
-	"errors"
-
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
-)
-
-var (
-	errNotSupportedType = errors.New("not supported type")
 )
 
 func getEaxmpleValue(t descriptor.FieldDescriptorProto_Type) (string, error) {
@@ -15,7 +9,7 @@ func getEaxmpleValue(t descriptor.FieldDescriptorProto_Type) (string, error) {
 	case descriptor.FieldDescriptorProto_TYPE_DOUBLE:
 		return "1", nil
 	default:
-		return "", errNotSupportedType
+		return "", ErrNotSupportedType
 	}
 }
 

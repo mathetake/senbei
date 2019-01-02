@@ -1,0 +1,11 @@
+version: 2
+
+jobs:
+  build:
+    working_directory: /senbei
+    docker:
+      - image: golang:1.11
+    steps:
+      - checkout
+      - run: go build .
+      - run: go test -v -race ./...

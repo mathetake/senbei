@@ -7,10 +7,14 @@ import (
 type ProtoVer string
 
 var (
-	OutFileName     = "grpc_snippets.txt"
-	Address         = "localhost"
-	Port            = ":50051"
-	ErrNotSupported = errors.New("not supported proto version")
+	ErrNotSupported     = errors.New("not supported proto version")
+	ErrNotSupportedType = errors.New("not supported type")
+)
+
+var (
+	OutFileName = "grpc_snippets.txt"
+	Address     = "localhost"
+	Port        = ":50051"
 )
 
 type Processor interface {
