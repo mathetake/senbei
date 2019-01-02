@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package senbei.example;
+option go_package = "main";
+
+
+service SenbeiService {
+    rpc GetSenbeisByNum (NumGetSenbei) returns (Senbeis) {}
+    rpc GetSenbeisByType (SenbeiTypes) returns (Senbeis) {}
+}
+
+message SenbeiTypes {
+    repeated string senbei_types = 1;
+    uint32 max_price = 2;
+}
+
+message NumGetSenbei {
+    uint32 num = 1;
+}
+
+message Senbei {
+    string senbei_type = 1;
+    uint32 price = 2;
+}
+
+message Senbeis {
+    repeated Senbei senbeis = 1;
+}
