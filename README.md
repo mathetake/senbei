@@ -31,9 +31,17 @@ option go_package = "main";
 
 
 service SenbeiService {
-    rpc GetSenbeis (SenbeiRuest) returns (Senbeis) {}
+    rpc GetSenbeis (SenbeiRuest) returns (Senbei) {}
+    rpc echo(Messages) returns(Messages) {}
 }
 
+message Message {
+    string message = 1;
+}
+
+message Messages {
+    repeated Message messages = 1;
+}
 
 message SenbeiRuest {
     repeated string senbei_types = 1;
@@ -60,17 +68,17 @@ message SenbeiRuest {
     NestedMessage nestedMessage = 5;
 }
 
-message Senbeis {}
+message Senbei {}
 ```
 
 the generated snippets look like
 
 ```
-> cat grpc_snippets.txt
-
+❯❯❯ cat grpc_snippets.txt
 [SenbeiService.GetSenbeis]
 grpc_cli call localhost:50051 SenbeiService.GetSenbeis --json_input '{
 	"maxPrice": 1,
+	"nestedEnum": "nestedEnum0",
 	"nestedMessage": {
 		"nestedMessage1": 1,
 		"nestedMessage2": 1,
@@ -79,7 +87,6 @@ grpc_cli call localhost:50051 SenbeiService.GetSenbeis --json_input '{
 			"nestedNestedMessage2": 1
 		}
 	},
-	"nonNestedEnum": "nestedEnum0",
 	"repeatedNestedEnum": [
 		"nestedEnum0"
 	],
@@ -87,6 +94,18 @@ grpc_cli call localhost:50051 SenbeiService.GetSenbeis --json_input '{
 		"string",
 		"string",
 		"string"
+	]
+}'
+
+[SenbeiService.echo]
+grpc_cli call localhost:50051 SenbeiService.echo --json_input '{
+	"messages": [
+		{
+			"message": "string"
+		},
+		{
+			"message": "string"
+		}
 	]
 }'
 ```

@@ -162,14 +162,22 @@ func (p *V3Processor) getMessageJson(in *descriptor.DescriptorProto) (*gabs.Cont
 				return nil, errors.Wrap(err, "getMessageJson failed")
 			}
 
-			jsonParsed, err := gabs.ParseJSON([]byte(fmt.Sprintf(
-				`{"%s": %s}`, f.GetJsonName(), obj.String())))
-
-			if err != nil {
-				return nil, errors.Wrap(err, "gabs.ParseJSON failed")
+			var nObj *gabs.Container
+			if f.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+				nObj, err = gabs.ParseJSON([]byte(fmt.Sprintf(
+					`{"%s": [%s, %s]}`, f.GetJsonName(), obj.String(), obj.String())))
+				if err != nil {
+					return nil, errors.Wrap(err, "gabs.ParseJSON failed")
+				}
+			} else {
+				nObj, err = gabs.ParseJSON([]byte(fmt.Sprintf(
+					`{"%s": %s}`, f.GetJsonName(), obj.String())))
+				if err != nil {
+					return nil, errors.Wrap(err, "gabs.ParseJSON failed")
+				}
 			}
 
-			err = ret.Merge(jsonParsed)
+			err = ret.Merge(nObj)
 			if err != nil {
 				return nil, errors.Wrap(err, "container.Merge failed")
 			}
