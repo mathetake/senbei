@@ -4,18 +4,91 @@
 Senbei (煎餅, 🍘) is a protocol buffers' third party plugin for generating [grpc_cli](https://github.com/grpc/grpc/blob/master/doc/command_line_tool.md) snippets
 
 
-## installation
+## usage
+
+To install the package, run the following:
 
 ```bash
-go get -u -d github.com/mathetake/senbei
-cd $GOPATH/src/github.com/mathetake/senbei
+git clone git@github.com:mathetake/senbei.git
+cd senbei
 go build -o $GOPATH/bin/protoc-gen-senbei
 ```
 
-## usage
+To obtain snippets, run `protoc` with `protoc-gen-senbei` as an protocol buffers' plugin: 
 
 ```$xslt
 protoc -I. --senbei_out=. path/to/foo.proto
+```
+
+Then you can find `grpc_snippets.txt` file in your current directory which contains generated snippets of grpc_cli for your service specification.
+
+For example, given the following `.proto`, 
+```proto
+syntax = "proto3";
+
+package senbei.example;
+option go_package = "main";
+
+
+service SenbeiService {
+    rpc GetSenbeis (SenbeiRuest) returns (Senbeis) {}
+}
+
+
+message SenbeiRuest {
+    repeated string senbei_types = 1;
+    uint32 max_price = 2;
+    enum NestedEnum {
+        nestedEnum0 = 0;
+        nestedEnum1 = 1;
+    }
+
+    repeated NestedEnum repeatedNestedEnum = 3;
+    NestedEnum nonNestedEnum = 4;
+
+    message NestedMessage {
+        uint64 nestedMessage1 = 1;
+        uint64 nestedMessage2 = 2;
+        message NestedNestedMessage {
+            uint64 nestedNestedMessage1 = 1;
+            uint64 nestedNestedMessage2 = 2;
+        }
+
+        NestedNestedMessage nestedNestedMessage = 3;
+    }
+
+    NestedMessage nestedMessage = 5;
+}
+
+message Senbeis {}
+```
+
+the generated snippets look like
+
+```
+> cat grpc_snippets.txt
+
+[SenbeiService.GetSenbeis]
+grpc_cli call localhost:50051 SenbeiService.GetSenbeis --json_input '{
+	"maxPrice": 1,
+	"nestedMessage": {
+		"nestedMessage1": 1,
+		"nestedMessage2": 1,
+		"nestedNestedMessage": {
+			"nestedNestedMessage1": 1,
+			"nestedNestedMessage2": 1
+		}
+	},
+	"nonNestedEnum": "nestedEnum0",
+	"repeatedNestedEnum": [
+		"nestedEnum0"
+	],
+	"senbeiTypes": [
+		"string",
+		"string",
+		"string"
+	]
+}'
 ```
 
 ## Author

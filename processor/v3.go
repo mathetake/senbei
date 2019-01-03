@@ -9,6 +9,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
+	"github.com/pkg/errors"
 )
 
 type snippet struct {
@@ -19,13 +20,14 @@ type snippet struct {
 
 func (s *snippet) compile() string {
 	return fmt.Sprintf("grpc_cli call %s%s %s.%s --json_input '%s'\n",
-		Address, Port, s.service, s.method, s.data.String(),
+		Address, Port, s.service, s.method, s.data.StringIndent("", "\t"),
 	)
 }
 
 type V3Processor struct {
 	files    map[string]*descriptor.FileDescriptorProto
 	messages map[string]*descriptor.DescriptorProto
+	enums    map[string]*descriptor.EnumDescriptorProto
 	output   []snippet
 	req      *plugin.CodeGeneratorRequest
 }
@@ -48,7 +50,7 @@ func (p *V3Processor) ParseReq() error {
 func (p *V3Processor) EmitResp() error {
 	var out string
 	for _, s := range p.output {
-		out += s.compile()
+		out += fmt.Sprintf("[%s.%s]\n%s\n", s.service, s.method, s.compile())
 	}
 
 	resp := &plugin.CodeGeneratorResponse{
@@ -71,16 +73,21 @@ func (p *V3Processor) EmitResp() error {
 func (p *V3Processor) ProcessReq() error {
 	p.files = make(map[string]*descriptor.FileDescriptorProto)
 	p.messages = make(map[string]*descriptor.DescriptorProto)
+	p.enums = make(map[string]*descriptor.EnumDescriptorProto)
 
 	// store files and message definitions to which we refer later
 	for _, f := range p.req.ProtoFile {
-
-		// store files
+		// store file
 		p.files[f.GetName()] = f
 
+		prefix := "." + f.GetPackage()
 		// store message definitions
 		for _, m := range f.MessageType {
-			p.messages["."+f.GetPackage()+"."+m.GetName()] = m
+			p.storeMessage(prefix, m)
+		}
+
+		for _, e := range f.EnumType {
+			p.enums[prefix+"."+e.GetName()] = e
 		}
 	}
 
@@ -90,7 +97,12 @@ func (p *V3Processor) ProcessReq() error {
 			for _, m := range srv.Method {
 
 				// process method
-				obj, err := p.processMethod(m)
+				inMsg, ok := p.messages[m.GetInputType()]
+				if !ok {
+					return ErrInvalidMethod
+				}
+
+				obj, err := p.getMessageJson(inMsg)
 				if err != nil {
 					return err
 				}
@@ -106,11 +118,82 @@ func (p *V3Processor) ProcessReq() error {
 	return nil
 }
 
-func (p *V3Processor) processMethod(m *descriptor.MethodDescriptorProto) (*gabs.Container, error) {
-	jsonObj := gabs.New()
-	jsonObj.Array("senbei_types")
-	jsonObj.ArrayAppend("wei", "senbei_types")
-	// "senbei_types": ["wei", "soiya"], "max_price": 10}
-	jsonObj.Set(10, "max_price")
-	return jsonObj, nil
+func (p *V3Processor) storeMessage(prefix string, m *descriptor.DescriptorProto) {
+	key := prefix + "." + m.GetName()
+	p.messages[key] = m
+
+	for _, nm := range m.NestedType {
+		p.storeMessage(key, nm)
+	}
+
+	for _, ne := range m.EnumType {
+		p.enums[key+"."+ne.GetName()] = ne
+	}
+}
+
+func (p *V3Processor) getMessageJson(in *descriptor.DescriptorProto) (*gabs.Container, error) {
+	var ret = gabs.New()
+
+	// fields
+	for _, f := range in.Field {
+		if isBasicType(f.GetType()) {
+			v, err := getExampleValue(f.GetType())
+			if err != nil {
+				return nil, errors.Wrap(err, "getExampleValue failed")
+			}
+
+			if f.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+				v = []interface{}{v, v, v}
+			}
+			ret.Set(v, f.GetJsonName())
+			continue
+		}
+
+		if isMessageType(f.GetType()) {
+			// process message type
+			msg, ok := p.messages[f.GetTypeName()]
+			if !ok {
+				return nil, ErrInvalidTypeName
+			}
+
+			// recursive
+			obj, err := p.getMessageJson(msg)
+			if err != nil {
+				return nil, errors.Wrap(err, "getMessageJson failed")
+			}
+
+			jsonParsed, err := gabs.ParseJSON([]byte(fmt.Sprintf(
+				`{"%s": %s}`, f.GetJsonName(), obj.String())))
+
+			if err != nil {
+				return nil, errors.Wrap(err, "gabs.ParseJSON failed")
+			}
+
+			err = ret.Merge(jsonParsed)
+			if err != nil {
+				return nil, errors.Wrap(err, "container.Merge failed")
+			}
+			continue
+		}
+
+		if isEnumType(f.GetType()) {
+			// process enum type
+			e, ok := p.enums[f.GetTypeName()]
+			if !ok {
+				return nil, ErrInvalidTypeName
+			}
+
+			n := e.Value[0].GetName()
+			if f.GetLabel() == descriptor.FieldDescriptorProto_LABEL_REPEATED {
+				ret.Set([]string{n}, f.GetJsonName())
+			} else {
+				ret.Set(n, f.GetJsonName())
+			}
+
+			continue
+		}
+
+		return nil, ErrInvalidTypeName
+	}
+	return ret, nil
 }

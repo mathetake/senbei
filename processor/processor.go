@@ -7,8 +7,10 @@ import (
 type ProtoVer string
 
 var (
-	ErrNotSupported     = errors.New("not supported proto version")
-	ErrNotSupportedType = errors.New("not supported type")
+	ErrInvalidMethod     = errors.New("invalid method")
+	ErrInvalidTypeName   = errors.New("invalid type name")
+	ErrNotSupportedProto = errors.New("not supported proto version")
+	ErrNotSupportedType  = errors.New("not supported type")
 )
 
 var (
@@ -30,8 +32,7 @@ var verToProcessor = map[ProtoVer]Processor{
 func GetProcessor(ver ProtoVer) (Processor, error) {
 	prc, ok := verToProcessor[ver]
 	if !ok {
-		return nil, ErrNotSupported
+		return nil, ErrNotSupportedProto
 	}
-
 	return prc, nil
 }
