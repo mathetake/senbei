@@ -4,6 +4,8 @@
 Senbei (煎餅, 🍘) is a protocol buffers' third party plugin for generating [grpc_cli](https://github.com/grpc/grpc/blob/master/doc/command_line_tool.md) snippets
 
 
+[![Watch the video](https://uploader.xzy.pw/upload/20190103152936_b8ffcb31_6547484662.png)](https://twitter.com/i/videos/1080709959271165952)
+
 ## usage
 
 To install the package, run the following:
@@ -52,7 +54,7 @@ message SenbeiRuest {
     }
 
     repeated NestedEnum repeatedNestedEnum = 3;
-    NestedEnum nonNestedEnum = 4;
+    NestedEnum nestedEnum = 4;
 
     message NestedMessage {
         uint64 nestedMessage1 = 1;
@@ -66,6 +68,24 @@ message SenbeiRuest {
     }
 
     NestedMessage nestedMessage = 5;
+
+    double float1 = 6;
+    float float2 = 7;
+
+    int32 int32_1 = 8;
+    uint32 int32_2 = 9;
+    fixed32 int32_3 = 10;
+    sint32 int32_4 = 11;
+
+
+    int64 int64_1 = 12;
+    uint64 int64_2 = 13;
+    fixed64 int64_3 = 14;
+    sint64 int64_4 = 15;
+
+    bool boo1 = 16;
+    string str = 17;
+    bytes bs = 18;
 }
 
 message Senbei {}
@@ -77,6 +97,18 @@ the generated snippets look like
 ❯❯❯ cat grpc_snippets.txt
 [SenbeiService.GetSenbeis]
 grpc_cli call localhost:50051 SenbeiService.GetSenbeis --json_input '{
+	"boo1": true,
+	"bs": "AQE=",
+	"float1": 1,
+	"float2": 1,
+	"int321": 1,
+	"int322": 1,
+	"int323": 1,
+	"int324": 1,
+	"int641": 1,
+	"int642": 1,
+	"int643": 1,
+	"int644": 1,
 	"maxPrice": 1,
 	"nestedEnum": "nestedEnum0",
 	"nestedMessage": {
@@ -94,7 +126,8 @@ grpc_cli call localhost:50051 SenbeiService.GetSenbeis --json_input '{
 		"string",
 		"string",
 		"string"
-	]
+	],
+	"str": "string"
 }'
 
 [SenbeiService.echo]
